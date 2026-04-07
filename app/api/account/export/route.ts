@@ -4,7 +4,6 @@ import { Resend } from 'resend'
 import { createClient } from '@/lib/supabase/server'
 import { rowsToCsv } from '@/lib/account/csv'
 import type { ExportBody } from '@/lib/account/export-types'
-import type { TaskTemplate } from '@/types/database'
 
 export const runtime = 'nodejs'
 
@@ -48,89 +47,25 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: '無效的請求內容' }, { status: 400 })
   }
 
-  const s = body.sections
-  if (
-    !s ||
-    (!s.profile &&
-      !s.taskTemplates &&
-      !s.dailyLogs &&
-      !s.dailyWellness &&
-      !s.dailyReviews)
-  ) {
+  const raw = body.sections
+  if (!raw) {
+    return NextResponse.json({ error: '請至少勾選一項資料區塊' }, { status: 400 })
+  }
+
+  // profile / taskTemplates in body are ignored (legacy clients)
+  const s = {
+    dailyLogs: !!raw.dailyLogs,
+    dailyWellness: !!raw.dailyWellness,
+    dailyReviews: !!raw.dailyReviews,
+  }
+
+  if (!s.dailyLogs && !s.dailyWellness && !s.dailyReviews) {
     return NextResponse.json({ error: '請至少勾選一項資料區塊' }, { status: 400 })
   }
 
   const { dateFrom, dateTo } = body
 
   const zip = new JSZip()
-
-  if (s.profile) {
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .maybeSingle()
-
-    if (profile) {
-      const headers = ['id', 'username', 'display_name', 'avatar_url', 'timezone', 'created_at', 'updated_at']
-      const row = [
-        profile.id,
-        profile.username,
-        profile.display_name,
-        profile.avatar_url,
-        profile.timezone,
-        profile.created_at,
-        profile.updated_at,
-      ]
-      zip.file('profile.csv', rowsToCsv(headers, [row]))
-    }
-  }
-
-  if (s.taskTemplates) {
-    const { data: templates } = await supabase
-      .from('task_templates')
-      .select('*')
-      .eq('user_id', user.id)
-      .order('sort_order')
-
-    if (templates?.length) {
-      const headers = [
-        'id',
-        'title',
-        'description',
-        'category',
-        'icon',
-        'color',
-        'sort_order',
-        'is_active',
-        'target_value',
-        'unit',
-        'recurrence',
-        'occurrence_date',
-        'created_at',
-        'updated_at',
-      ]
-      const rows = templates.map((t: TaskTemplate) => [
-        t.id,
-        t.title,
-        t.description,
-        t.category,
-        t.icon,
-        t.color,
-        t.sort_order,
-        t.is_active,
-        t.target_value,
-        t.unit,
-        t.recurrence,
-        t.occurrence_date ?? '',
-        t.created_at,
-        t.updated_at,
-      ])
-      zip.file('task_templates.csv', rowsToCsv(headers, rows))
-    } else {
-      zip.file('task_templates.csv', rowsToCsv(['message'], [['（無資料）']]))
-    }
-  }
 
   if (s.dailyLogs) {
     let q = supabase

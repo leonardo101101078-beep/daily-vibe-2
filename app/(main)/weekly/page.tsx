@@ -168,24 +168,20 @@ export default async function WeeklyPage({
                     )
                   }
                   const isToday = cell.date === calendarToday
+                  const isPast = cell.date < calendarToday
                   const isFuture = cell.date > calendarToday
-                  if (isFuture) {
-                    return (
-                      <span
-                        key={cell.date}
-                        className="flex aspect-square items-center justify-center rounded-lg border border-transparent text-sm font-medium tabular-nums opacity-35"
-                      >
-                        {cell.dayNum}
-                      </span>
-                    )
-                  }
                   return (
                     <Link
                       key={cell.date}
                       href={`/today?date=${cell.date}`}
                       className={cn(
-                        'flex aspect-square items-center justify-center rounded-lg border border-border/60 bg-card text-sm font-medium tabular-nums transition-colors hover:bg-muted/80',
-                        isToday && 'border-primary bg-primary/10 font-bold',
+                        'flex aspect-square items-center justify-center rounded-lg border text-sm font-medium tabular-nums transition-colors',
+                        isToday &&
+                          'border-primary bg-primary/10 font-bold shadow-sm hover:bg-primary/15',
+                        isFuture &&
+                          'border-primary/45 bg-card font-semibold text-foreground shadow-sm hover:bg-primary/5',
+                        isPast &&
+                          'border-border/40 bg-card/70 text-muted-foreground opacity-80 hover:bg-muted/70',
                       )}
                     >
                       {cell.dayNum}
@@ -196,7 +192,7 @@ export default async function WeeklyPage({
             ))}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            點選日期可開啟當日清單。未來日期無法點選。
+            點選日期可開啟當日清單。過去日期較淡、未來日期較清楚。
           </p>
         </div>
       </div>

@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 import { getSessionUser } from '@/lib/auth/session'
 import { SettingsClient } from '@/components/settings/SettingsClient'
 
@@ -11,13 +10,7 @@ export default async function SettingsPage() {
   const user = await getSessionUser()
   if (!user) redirect('/login')
 
-  const supabase = createClient()
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('display_name, username')
-    .eq('id', user.id)
-    .maybeSingle()
+  const email = user.email ?? ''
 
   return (
     <main className="min-h-screen bg-background">
@@ -26,13 +19,11 @@ export default async function SettingsPage() {
           個人檔案
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          名稱、信箱、週報與資料匯出、登出與刪除帳戶
+          <span className="font-medium text-foreground">{email || '—'}</span>
+          {' · '}
+          信箱、週報與資料匯出、登出與刪除帳戶
         </p>
-        <SettingsClient
-          initialEmail={user.email ?? ''}
-          displayName={profile?.display_name ?? null}
-          username={profile?.username ?? null}
-        />
+        <SettingsClient initialEmail={email} />
       </div>
     </main>
   )

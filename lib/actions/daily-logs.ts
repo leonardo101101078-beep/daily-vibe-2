@@ -155,7 +155,7 @@ export async function updateLogStatus(
 
   if (error) throw new Error(error.message)
 
-  if (status === 'completed') {
+  if (status === 'completed' || status === 'pending') {
     const { data: logRow, error: fetchErr } = await supabase
       .from('daily_logs')
       .select('task_template_id')
@@ -171,10 +171,17 @@ export async function updateLogStatus(
 
       const rec = (tpl as { recurrence?: string } | null)?.recurrence
       if (rec === 'once') {
-        await supabase
-          .from('task_templates')
-          .update({ is_active: false })
-          .eq('id', logRow.task_template_id)
+        if (status === 'completed') {
+          await supabase
+            .from('task_templates')
+            .update({ is_active: false })
+            .eq('id', logRow.task_template_id)
+        } else {
+          await supabase
+            .from('task_templates')
+            .update({ is_active: true })
+            .eq('id', logRow.task_template_id)
+        }
       }
     }
   }

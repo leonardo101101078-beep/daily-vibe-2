@@ -269,7 +269,7 @@ export function TodayExperience({
         >
           <div className="overflow-hidden rounded-2xl border border-border/50 bg-card/90 shadow-sm backdrop-blur-sm">
             <GroupedDayChecklist
-              key={logs.map((l) => l.id).join('|')}
+              key={viewDate}
               initialLogs={logs}
               localFirst
             />

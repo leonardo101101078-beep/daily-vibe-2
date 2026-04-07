@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Loader2, LogOut, Mail } from 'lucide-react'
 import { AppIcon } from '@/components/AppIcon'
@@ -11,29 +11,21 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import type { ExportBody } from '@/lib/account/export-types'
-import { updateDisplayName } from '@/lib/actions/profile'
 
 const DELETE_CONFIRM_PHRASE = '確認刪除'
 
 type Props = {
   initialEmail: string
-  displayName: string | null
-  username: string | null
 }
 
-export function SettingsClient({ initialEmail, displayName, username }: Props) {
+export function SettingsClient({ initialEmail }: Props) {
   const router = useRouter()
-  const [nameValue, setNameValue] = useState(displayName ?? '')
-  const [nameLoading, setNameLoading] = useState(false)
-  const [nameMsg, setNameMsg] = useState('')
   const [email, setEmail] = useState(initialEmail)
   const [newEmail, setNewEmail] = useState('')
   const [emailLoading, setEmailLoading] = useState(false)
   const [emailMsg, setEmailMsg] = useState('')
 
   const [sections, setSections] = useState({
-    profile: true,
-    taskTemplates: true,
     dailyLogs: true,
     dailyWellness: true,
     dailyReviews: true,
@@ -53,25 +45,6 @@ export function SettingsClient({ initialEmail, displayName, username }: Props) {
   const [deleteConfirm, setDeleteConfirm] = useState('')
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteMsg, setDeleteMsg] = useState('')
-
-  useEffect(() => {
-    setNameValue(displayName ?? '')
-  }, [displayName])
-
-  const handleUpdateName = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setNameLoading(true)
-    setNameMsg('')
-    try {
-      await updateDisplayName(nameValue)
-      setNameMsg('已儲存名稱')
-      router.refresh()
-    } catch (err) {
-      setNameMsg(err instanceof Error ? err.message : '儲存失敗')
-    } finally {
-      setNameLoading(false)
-    }
-  }
 
   const handleWeeklyReport = async () => {
     if (!wrFrom || !wrTo) {
@@ -124,8 +97,6 @@ export function SettingsClient({ initialEmail, displayName, username }: Props) {
     setExportMsg('')
     const body: ExportBody = {
       sections: {
-        profile: sections.profile,
-        taskTemplates: sections.taskTemplates,
         dailyLogs: sections.dailyLogs,
         dailyWellness: sections.dailyWellness,
         dailyReviews: sections.dailyReviews,
@@ -189,42 +160,8 @@ export function SettingsClient({ initialEmail, displayName, username }: Props) {
     <div className="mt-8 space-y-6">
       <Card>
         <CardHeader className="space-y-1 pb-4">
-          <CardTitle className="text-lg">個人資訊</CardTitle>
-          <CardDescription>顯示名稱可編輯；使用者名稱（username）由系統同步。</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleUpdateName} className="space-y-3">
-            <div className="space-y-2">
-              <Label htmlFor="display-name">顯示名稱</Label>
-              <Input
-                id="display-name"
-                value={nameValue}
-                onChange={(e) => setNameValue(e.target.value)}
-                placeholder="你的名字"
-                className="rounded-xl"
-                maxLength={80}
-              />
-            </div>
-            {nameMsg ? (
-              <p className="text-xs text-muted-foreground">{nameMsg}</p>
-            ) : null}
-            <Button type="submit" disabled={nameLoading}>
-              {nameLoading ? (
-                <AppIcon icon={Loader2} size="sm" className="animate-spin" />
-              ) : null}
-              儲存名稱
-            </Button>
-          </form>
-          <p className="mt-4 text-sm text-muted-foreground">
-            使用者名稱：<span className="text-foreground">{username ?? '—'}</span>
-          </p>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="space-y-1 pb-4">
           <CardTitle className="text-lg">登入信箱</CardTitle>
-          <CardDescription>目前：{email || '—'}</CardDescription>
+          <CardDescription>目前帳號：{email || '—'}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleUpdateEmail} className="space-y-3">
@@ -306,15 +243,14 @@ export function SettingsClient({ initialEmail, displayName, username }: Props) {
         <CardHeader className="space-y-1 pb-4">
           <CardTitle className="text-lg">完整資料匯出（ZIP）</CardTitle>
           <CardDescription>
-            勾選要匯出的區塊，可選日期範圍（適用於日誌、健康、回顧；模板與個人檔為全量）。ZIP 內含 CSV，將寄至目前登入信箱。
+            勾選要匯出的區塊；可選日期範圍（適用於日誌、健康、回顧）。ZIP
+            內含 CSV，將寄至目前登入信箱。
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3">
             {(
               [
-                ['profile', '個人檔（profiles）'],
-                ['taskTemplates', '任務模板'],
                 ['dailyLogs', '每日任務日誌'],
                 ['dailyWellness', '健康管理'],
                 ['dailyReviews', '每日回顧'],

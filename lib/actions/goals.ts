@@ -56,6 +56,25 @@ export async function addAnnualGoal(title: string): Promise<void> {
   for (const p of PATHS) revalidatePath(p)
 }
 
+export async function reorderAnnualGoals(orderedIds: string[]): Promise<void> {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabase
+      .from('annual_goals')
+      .update({ sort_order: i })
+      .eq('id', orderedIds[i])
+      .eq('user_id', user.id)
+
+    if (error) throw new Error(error.message)
+  }
+  for (const p of PATHS) revalidatePath(p)
+}
+
 export async function deleteAnnualGoal(id: string): Promise<void> {
   const supabase = createClient()
   const {
@@ -129,6 +148,31 @@ export async function addMonthlyGoal(
   })
 
   if (error) throw new Error(error.message)
+  for (const p of PATHS) revalidatePath(p)
+}
+
+export async function reorderMonthlyGoals(
+  year: number,
+  month: number,
+  orderedIds: string[],
+): Promise<void> {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabase
+      .from('monthly_goals')
+      .update({ sort_order: i })
+      .eq('id', orderedIds[i])
+      .eq('user_id', user.id)
+      .eq('year', year)
+      .eq('month', month)
+
+    if (error) throw new Error(error.message)
+  }
   for (const p of PATHS) revalidatePath(p)
 }
 

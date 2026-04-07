@@ -47,25 +47,43 @@ export function GroupedDayChecklist({
     const next: TaskStatus =
       currentStatus === 'completed' ? 'pending' : 'completed'
 
-    startTransition(async () => {
+    startTransition(() => {
       applyOptimistic({ id: logId, status: next })
-      if (localFirst) {
-        await updateLogStatusLocal(logId, next)
-      } else {
-        await updateLogStatus(logId, next)
-      }
     })
+    void (async () => {
+      try {
+        if (localFirst) {
+          await updateLogStatusLocal(logId, next)
+        } else {
+          await updateLogStatus(logId, next)
+        }
+      } catch {
+        startTransition(() => {
+          applyOptimistic({ id: logId, status: currentStatus })
+        })
+      }
+    })()
   }
 
   const handleNoteChange = (logId: string, note: string) => {
-    startTransition(async () => {
+    const previousNote =
+      logs.find((l) => l.id === logId)?.note ?? ''
+    startTransition(() => {
       applyOptimistic({ id: logId, note })
-      if (localFirst) {
-        await updateLogNoteLocal(logId, note)
-      } else {
-        await updateLogNote(logId, note)
-      }
     })
+    void (async () => {
+      try {
+        if (localFirst) {
+          await updateLogNoteLocal(logId, note)
+        } else {
+          await updateLogNote(logId, note)
+        }
+      } catch {
+        startTransition(() => {
+          applyOptimistic({ id: logId, note: previousNote })
+        })
+      }
+    })()
   }
 
   const reminders = logs.filter((l) => l.task_templates?.category === 'reminder')

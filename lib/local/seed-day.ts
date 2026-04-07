@@ -91,11 +91,8 @@ export async function seedDailyLogsForDayLocal(
   day: string,
   calendarToday: string,
 ): Promise<void> {
-  const cap = calendarToday
-  if (day > cap) return
-
   const db = getLocalDB()
-  await deactivatePastOnceTemplatesLocal(userId, cap)
+  await deactivatePastOnceTemplatesLocal(userId, calendarToday)
 
   const templates = await db.taskTemplates
     .where('user_id')

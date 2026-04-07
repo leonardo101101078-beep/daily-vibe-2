@@ -20,12 +20,12 @@ export async function updateLogStatusLocal(
     dirty: true,
   })
 
-  if (status === 'completed' && row.task_template_id) {
+  if (row.task_template_id) {
     const tpl = await db.taskTemplates.get(row.task_template_id)
     if (tpl?.recurrence === 'once') {
       await db.taskTemplates.put({
         ...tpl,
-        is_active: false,
+        is_active: status === 'pending',
         updated_at: new Date().toISOString(),
         dirty: true,
       })
