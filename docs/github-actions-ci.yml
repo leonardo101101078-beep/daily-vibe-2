@@ -1,0 +1,43 @@
+# 複製到倉庫路徑：.github/workflows/ci.yml
+# 若本機 git push 因 OAuth 缺少 workflow 權限被拒，可在 GitHub 網頁「Add file」貼上此內容建立。
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0
+      NEXT_PUBLIC_VAPID_PUBLIC_KEY: BEl62iUYgUivxIkv69yViEuiBIa40HI5oR9xTFuC9z0
+      SUPABASE_SERVICE_ROLE_KEY: ci-placeholder-service-role
+      VAPID_SUBJECT: mailto:ci@example.com
+      VAPID_PUBLIC_KEY: BEl62iUYgUivxIkv69yViEuiBIa40HI5oR9xTFuC9z0
+      VAPID_PRIVATE_KEY: ci-placeholder-private
+      CRON_SECRET: ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build

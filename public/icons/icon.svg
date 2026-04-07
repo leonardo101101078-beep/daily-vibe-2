@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <!-- Background -->
+  <rect width="512" height="512" rx="112" fill="#6366f1"/>
+
+  <!-- Checkmark circle outline -->
+  <circle cx="256" cy="220" r="100" fill="none" stroke="white" stroke-width="28" stroke-opacity="0.3"/>
+
+  <!-- Checkmark path -->
+  <path
+    d="M196 220 L236 262 L316 178"
+    fill="none"
+    stroke="white"
+    stroke-width="32"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+  />
+
+  <!-- "vibe" wave line below -->
+  <path
+    d="M136 340 Q166 310 196 340 Q226 370 256 340 Q286 310 316 340 Q346 370 376 340"
+    fill="none"
+    stroke="white"
+    stroke-width="20"
+    stroke-linecap="round"
+    stroke-opacity="0.7"
+  />
+</svg>

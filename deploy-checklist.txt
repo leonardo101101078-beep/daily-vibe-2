@@ -1,0 +1,7 @@
+Daily-Vibe 2.0 — Vercel 上線後請手動勾選（本檔不提交機密）
+
+[ ] 1. Vercel：Import Git 倉庫；若倉庫根目錄含多個專案，Root Directory 設為 daily-vibe；Node.js 20.x
+[ ] 2. Vercel：Settings → Environment Variables，依 .env.local.example 填入 Production（勿把 .env.local 提交 Git）
+[ ] 3. Supabase：Authentication → URL Configuration → Site URL 與 Redirect URLs 含 https://你的網域/auth/callback
+[ ] 4. 部署成功後：開首頁、登入、/settings；匯出與刪除帳戶請用測試帳號驗證
+[ ] 5. 若仍看到舊版頁面：Chrome → F12 → Application → Service Workers → Unregister，並 Clear site data 後重開（僅需一次；已調整 SW 不再快取 HTML）
