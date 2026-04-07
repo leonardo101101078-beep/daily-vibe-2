@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimistic, useTransition } from 'react'
+import { useOptimistic } from 'react'
 import Link from 'next/link'
 import { ClipboardList, Plus } from 'lucide-react'
 import { AppIcon } from '@/components/AppIcon'
@@ -15,9 +15,7 @@ interface TaskChecklistProps {
 }
 
 export function TaskChecklist({ initialLogs }: TaskChecklistProps) {
-  const [, startTransition] = useTransition()
-
-  // Optimistic state: reflects changes instantly while server action runs in background
+  // Optimistic state: sync UI first, then persist in background
   const [logs, applyOptimistic] = useOptimistic(
     initialLogs,
     (
@@ -35,32 +33,24 @@ export function TaskChecklist({ initialLogs }: TaskChecklistProps) {
     const next: TaskStatus =
       currentStatus === 'completed' ? 'pending' : 'completed'
 
-    startTransition(() => {
-      applyOptimistic({ id: logId, status: next })
-    })
+    applyOptimistic({ id: logId, status: next })
     void (async () => {
       try {
         await updateLogStatus(logId, next)
       } catch {
-        startTransition(() => {
-          applyOptimistic({ id: logId, status: currentStatus })
-        })
+        applyOptimistic({ id: logId, status: currentStatus })
       }
     })()
   }
 
   const handleNoteChange = (logId: string, note: string) => {
     const previousNote = logs.find((l) => l.id === logId)?.note ?? ''
-    startTransition(() => {
-      applyOptimistic({ id: logId, note })
-    })
+    applyOptimistic({ id: logId, note })
     void (async () => {
       try {
         await updateLogNote(logId, note)
       } catch {
-        startTransition(() => {
-          applyOptimistic({ id: logId, note: previousNote })
-        })
+        applyOptimistic({ id: logId, note: previousNote })
       }
     })()
   }

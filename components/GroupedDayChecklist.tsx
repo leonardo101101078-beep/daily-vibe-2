@@ -152,9 +152,8 @@ export function GroupedDayChecklist({
     const next: TaskStatus =
       currentStatus === 'completed' ? 'pending' : 'completed'
 
-    startTransition(() => {
-      applyOptimistic({ id: logId, status: next })
-    })
+    // Sync optimistic update so checkbox matches wellness UX (paint first, then persist).
+    applyOptimistic({ id: logId, status: next })
     void (async () => {
       try {
         if (localFirst) {
@@ -163,9 +162,7 @@ export function GroupedDayChecklist({
           await updateLogStatus(logId, next)
         }
       } catch {
-        startTransition(() => {
-          applyOptimistic({ id: logId, status: currentStatus })
-        })
+        applyOptimistic({ id: logId, status: currentStatus })
       }
     })()
   }
@@ -173,9 +170,7 @@ export function GroupedDayChecklist({
   const handleNoteChange = (logId: string, note: string) => {
     const previousNote =
       logs.find((l) => l.id === logId)?.note ?? ''
-    startTransition(() => {
-      applyOptimistic({ id: logId, note })
-    })
+    applyOptimistic({ id: logId, note })
     void (async () => {
       try {
         if (localFirst) {
@@ -184,9 +179,7 @@ export function GroupedDayChecklist({
           await updateLogNote(logId, note)
         }
       } catch {
-        startTransition(() => {
-          applyOptimistic({ id: logId, note: previousNote })
-        })
+        applyOptimistic({ id: logId, note: previousNote })
       }
     })()
   }
