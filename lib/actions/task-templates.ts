@@ -158,3 +158,83 @@ export async function deactivateTaskTemplate(templateId: string): Promise<void> 
 
   for (const p of REVALIDATE) revalidatePath(p)
 }
+
+/** Reassigns `sort_order` to 0..n-1 for every active template; `orderedTemplateIds` must be a permutation of those ids. */
+export async function reorderTaskTemplates(
+  orderedTemplateIds: string[],
+): Promise<void> {
+  const user = await getSessionUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const supabase = createClient()
+  const { data: rows, error: fetchErr } = await supabase
+    .from('task_templates')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('is_active', true)
+    .order('sort_order', { ascending: true })
+
+  if (fetchErr) throw new Error(fetchErr.message)
+
+  const expected = new Set((rows ?? []).map((r) => r.id as string))
+  if (orderedTemplateIds.length !== expected.size) {
+    throw new Error('排序內容無效')
+  }
+  for (const id of orderedTemplateIds) {
+    if (!expected.has(id)) throw new Error('排序內容無效')
+  }
+
+  for (let i = 0; i < orderedTemplateIds.length; i++) {
+    const { error } = await supabase
+      .from('task_templates')
+      .update({ sort_order: i })
+      .eq('id', orderedTemplateIds[i])
+      .eq('user_id', user.id)
+
+    if (error) throw new Error(error.message)
+  }
+
+  for (const p of REVALIDATE) revalidatePath(p)
+}
+
+export async function updateTaskTemplateFields(
+  templateId: string,
+  input: { title?: string; description?: string | null },
+): Promise<void> {
+  const user = await getSessionUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const supabase = createClient()
+  const { data: row, error: fetchErr } = await supabase
+    .from('task_templates')
+    .select('id')
+    .eq('id', templateId)
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (fetchErr) throw new Error(fetchErr.message)
+  if (!row) throw new Error('找不到任務')
+
+  const patch: Record<string, string | null> = {}
+  if (input.title !== undefined) {
+    const t = input.title.trim()
+    if (!t) throw new Error('標題為必填')
+    patch.title = t
+  }
+  if (input.description !== undefined) {
+    const d = input.description
+    patch.description =
+      d == null || d === '' ? null : d.trim() || null
+  }
+  if (Object.keys(patch).length === 0) return
+
+  const { error } = await supabase
+    .from('task_templates')
+    .update(patch)
+    .eq('id', templateId)
+    .eq('user_id', user.id)
+
+  if (error) throw new Error(error.message)
+
+  for (const p of REVALIDATE) revalidatePath(p)
+}

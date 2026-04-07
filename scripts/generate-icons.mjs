@@ -1,6 +1,6 @@
 /**
  * Generates PWA icons + app/icon.png from public/icons/source-brand.png (or .jpg).
- * Crop region targets the circular checkmark; tune CROP_* if text still appears.
+ * Uses a centered square crop (full mark); for tall brand art with text below, restore a smaller top crop.
  */
 import sharp from 'sharp'
 import { existsSync } from 'fs'
@@ -26,10 +26,10 @@ const meta = await sharp(srcPath).metadata()
 const w = meta.width ?? 1024
 const h = meta.height ?? 1024
 
-// Centered square crop from upper area (logo mark without bottom text)
-const side = Math.min(w, h, Math.floor(Math.min(w, h) * 0.58))
+// Centered square (e.g. standalone circular mark on square canvas)
+const side = Math.min(w, h)
 const left = Math.floor((w - side) / 2)
-const top = Math.floor(h * 0.06)
+const top = Math.floor((h - side) / 2)
 
 const bg = { r: 255, g: 247, b: 242, alpha: 1 }
 

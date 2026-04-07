@@ -46,11 +46,11 @@ export function ManageTaskTemplates({ templates }: Props) {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">已建立的任務</CardTitle>
+        <CardTitle className="text-base">已建立的循環任務</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         <p className="text-xs text-muted-foreground">
-          停用後不會再自動出現在未來日期；過去紀錄仍會保留。
+          含單次與重複規則的任務模板；停用後不會再自動出現在未來日期，過去紀錄仍會保留。
         </p>
         <ul className="space-y-2" role="list">
           {active.map((t) => (

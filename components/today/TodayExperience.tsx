@@ -17,6 +17,7 @@ import {
   performFullSync,
 } from '@/lib/sync/sync-engine'
 import { countDirtyRows } from '@/lib/local/dirty-count'
+import type { WellnessFormState } from '@/lib/actions/wellness'
 import {
   getWellnessForDateLocal,
   getDailyReviewTextLocal,
@@ -157,6 +158,42 @@ export function TodayExperience({
     }
   }, [userId, refreshFromDexie, router])
 
+  const persistWellnessThenSync = useCallback(
+    async (payload: WellnessFormState) => {
+      await upsertWellnessLocal(userId, viewDate, payload)
+      await refreshFromDexie()
+      setSyncing(true)
+      setInitError(null)
+      try {
+        const r = await performFullSync(userId)
+        if (!r.ok && r.error) setInitError(r.error)
+        await refreshFromDexie()
+        router.refresh()
+      } finally {
+        setSyncing(false)
+      }
+    },
+    [userId, viewDate, refreshFromDexie, router],
+  )
+
+  const persistDailyNoteThenSync = useCallback(
+    async (text: string) => {
+      await upsertDailyNoteLocal(userId, viewDate, text)
+      await refreshFromDexie()
+      setSyncing(true)
+      setInitError(null)
+      try {
+        const r = await performFullSync(userId)
+        if (!r.ok && r.error) setInitError(r.error)
+        await refreshFromDexie()
+        router.refresh()
+      } finally {
+        setSyncing(false)
+      }
+    },
+    [userId, viewDate, refreshFromDexie, router],
+  )
+
   const taskCount = logs.length
   const isViewingOtherDay = viewDate !== calendarToday
 
@@ -255,11 +292,7 @@ export function TodayExperience({
           <WellnessCard
             date={viewDate}
             initial={wellness}
-            persistOverride={(payload) =>
-              upsertWellnessLocal(userId, viewDate, payload).then(() =>
-                refreshFromDexie(),
-              )
-            }
+            persistOverride={persistWellnessThenSync}
           />
         </div>
 
@@ -283,11 +316,7 @@ export function TodayExperience({
           <DailyNoteCard
             date={viewDate}
             initialText={noteText}
-            persistOverride={(text) =>
-              upsertDailyNoteLocal(userId, viewDate, text).then(() =>
-                refreshFromDexie(),
-              )
-            }
+            persistOverride={persistDailyNoteThenSync}
           />
         </div>
 
