@@ -1,27 +1,28 @@
 # PWA Icons
 
-Place the following PNG icon files in this directory:
+## Source
 
-| File                    | Size      | Purpose                  |
-|-------------------------|-----------|--------------------------|
-| icon-192.png            | 192×192   | Standard icon            |
-| icon-512.png            | 512×512   | Standard icon (large)    |
-| icon-maskable-192.png   | 192×192   | Maskable (Android)       |
-| icon-maskable-512.png   | 512×512   | Maskable (Android large) |
+Place the brand image as **`source-brand.png`** or **`source-brand.jpg`** in this directory (square or vertical logo; script crops the upper-center square for the mark).
 
-You can generate these from `icon.svg` using a tool like:
-- https://maskable.app/editor (for maskable variants)
-- https://realfavicongenerator.net
-- `sharp` npm package in a build script
+## Regenerate all icons
 
-## Quick generation with sharp
+From the repo root:
 
 ```bash
-npm install sharp
-node -e "
-  const sharp = require('sharp');
-  [192, 512].forEach(s =>
-    sharp('public/icons/icon.svg').resize(s, s).toFile('public/icons/icon-' + s + '.png')
-  );
-"
+npm run icons
 ```
+
+This runs [`scripts/generate-icons.mjs`](../../scripts/generate-icons.mjs) (uses **sharp**) and writes:
+
+| Output | Use |
+|--------|-----|
+| `icon-192.png`, `icon-512.png` | [`app/manifest.ts`](../../app/manifest.ts) — `purpose: any` |
+| `icon-maskable-192.png`, `icon-maskable-512.png` | `purpose: maskable` (safe zone padding) |
+| [`app/icon.png`](../../app/icon.png) | Next.js favicon / metadata |
+
+If the crop still includes text or cuts the circle, edit the `side` / `top` logic at the top of `scripts/generate-icons.mjs`.
+
+## Manual tools
+
+- [maskable.app](https://maskable.app/editor) — preview maskable icons
+- [realfavicongenerator.net](https://realfavicongenerator.net) — alternative packs

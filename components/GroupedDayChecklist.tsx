@@ -1,12 +1,14 @@
 'use client'
 
-import { useOptimistic, useTransition } from 'react'
+import { useOptimistic, useState, useTransition } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { ClipboardList, Plus } from 'lucide-react'
 import { AppIcon } from '@/components/AppIcon'
 import { Button } from '@/components/ui/button'
 import { DailyProgress } from '@/components/DailyProgress'
 import { TaskItem } from '@/components/TaskItem'
+import { deactivateTaskTemplate } from '@/lib/actions/task-templates'
 import { updateLogStatus, updateLogNote } from '@/lib/actions/daily-logs'
 import { updateLogNoteLocal, updateLogStatusLocal } from '@/lib/local/log-mutations'
 import {
@@ -30,7 +32,11 @@ export function GroupedDayChecklist({
   initialLogs,
   localFirst = false,
 }: GroupedDayChecklistProps) {
+  const router = useRouter()
   const [, startTransition] = useTransition()
+  const [templateFeedback, setTemplateFeedback] = useState<'idle' | 'ok' | 'err'>(
+    'idle',
+  )
 
   const [logs, applyOptimistic] = useOptimistic(
     initialLogs,
@@ -86,6 +92,27 @@ export function GroupedDayChecklist({
     })()
   }
 
+  const handleDeactivateTemplate = (templateId: string, templateTitle: string) => {
+    if (
+      !confirm(
+        `確定停用「${templateTitle}」？停用後不會再出現在未來日期；今日紀錄仍保留。`,
+      )
+    ) {
+      return
+    }
+    void (async () => {
+      try {
+        await deactivateTaskTemplate(templateId)
+        setTemplateFeedback('ok')
+        window.setTimeout(() => setTemplateFeedback('idle'), 4000)
+        router.refresh()
+      } catch {
+        setTemplateFeedback('err')
+        window.setTimeout(() => setTemplateFeedback('idle'), 5000)
+      }
+    })()
+  }
+
   const reminders = logs.filter((l) => l.task_templates?.category === 'reminder')
   const mainByCat = MAIN_TASK_CATEGORY_ORDER.map((key) => ({
     key,
@@ -129,6 +156,14 @@ export function GroupedDayChecklist({
   return (
     <div className="space-y-6 pb-4">
       <div className="px-4 pt-2">
+        {templateFeedback === 'ok' ? (
+          <p className="mb-2 text-xs font-medium text-primary">已停用任務模板</p>
+        ) : null}
+        {templateFeedback === 'err' ? (
+          <p className="mb-2 text-xs font-medium text-destructive">
+            停用失敗，請檢查網路後再試
+          </p>
+        ) : null}
         <DailyProgress completed={completed} total={logs.length} />
       </div>
 
@@ -144,6 +179,9 @@ export function GroupedDayChecklist({
                   log={log}
                   onToggle={handleToggle}
                   onNoteChange={handleNoteChange}
+                  onDeactivateTemplate={
+                    localFirst ? handleDeactivateTemplate : undefined
+                  }
                 />
               </li>
             ))}
@@ -163,6 +201,9 @@ export function GroupedDayChecklist({
                   log={log}
                   onToggle={handleToggle}
                   onNoteChange={handleNoteChange}
+                  onDeactivateTemplate={
+                    localFirst ? handleDeactivateTemplate : undefined
+                  }
                 />
               </li>
             ))}
@@ -182,6 +223,9 @@ export function GroupedDayChecklist({
                   log={log}
                   onToggle={handleToggle}
                   onNoteChange={handleNoteChange}
+                  onDeactivateTemplate={
+                    localFirst ? handleDeactivateTemplate : undefined
+                  }
                 />
               </li>
             ))}

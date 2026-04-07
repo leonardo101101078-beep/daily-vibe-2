@@ -15,9 +15,16 @@ interface TaskItemProps {
   log: LogWithTemplate
   onToggle: (logId: string, currentStatus: TaskStatus) => void
   onNoteChange: (logId: string, note: string) => void
+  /** When set, shows「停用此任務模板」— same as 已建立的任務 card. */
+  onDeactivateTemplate?: (templateId: string, templateTitle: string) => void
 }
 
-export function TaskItem({ log, onToggle, onNoteChange }: TaskItemProps) {
+export function TaskItem({
+  log,
+  onToggle,
+  onNoteChange,
+  onDeactivateTemplate,
+}: TaskItemProps) {
   const [noteOpen, setNoteOpen] = useState(!!log.note)
   const [noteValue, setNoteValue] = useState(log.note ?? '')
 
@@ -80,6 +87,17 @@ export function TaskItem({ log, onToggle, onNoteChange }: TaskItemProps) {
                 {template.description}
               </p>
             )}
+            {template?.id && onDeactivateTemplate ? (
+              <button
+                type="button"
+                className="mt-1.5 text-left text-[11px] font-medium text-muted-foreground underline decoration-muted-foreground/50 underline-offset-2 hover:text-foreground"
+                onClick={() =>
+                  onDeactivateTemplate(template.id, template.title ?? '')
+                }
+              >
+                停用此任務模板
+              </button>
+            ) : null}
           </div>
 
           {/* Note toggle button */}
