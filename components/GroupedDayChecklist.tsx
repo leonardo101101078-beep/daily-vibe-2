@@ -1,11 +1,14 @@
 'use client'
 
 import {
+  useCallback,
+  useMemo,
   useOptimistic,
+  useRef,
   useState,
   useTransition,
+  memo,
   type HTMLAttributes,
-  type ReactNode,
 } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
@@ -30,7 +33,7 @@ import { ClipboardList, Plus } from 'lucide-react'
 import { AppIcon } from '@/components/AppIcon'
 import { Button } from '@/components/ui/button'
 import { DailyProgress } from '@/components/DailyProgress'
-import { TaskItem } from '@/components/TaskItem'
+import { TaskItem, type TaskItemProps } from '@/components/TaskItem'
 import {
   deactivateTaskTemplate,
   reorderTaskTemplates,
@@ -96,13 +99,48 @@ function mergeSectionOrder(
   })
 }
 
-function SortableTaskRow({
+type SortableTaskRowProps = { log: LogWithTemplate } & Omit<
+  TaskItemProps,
+  'log' | 'dragHandleProps'
+>
+
+function sortableRowPropsEqual(
+  prev: SortableTaskRowProps,
+  next: SortableTaskRowProps,
+): boolean {
+  if (prev.log !== next.log) {
+    if (prev.log.id !== next.log.id) return false
+    if (
+      prev.log.status !== next.log.status ||
+      prev.log.note !== next.log.note
+    ) {
+      return false
+    }
+    const a = prev.log.task_templates
+    const b = next.log.task_templates
+    if (
+      a?.id !== b?.id ||
+      a?.title !== b?.title ||
+      a?.description !== b?.description ||
+      a?.category !== b?.category
+    ) {
+      return false
+    }
+  }
+  if (prev.onToggle !== next.onToggle) return false
+  if (prev.onNoteChange !== next.onNoteChange) return false
+  if (prev.onTemplateFieldsCommit !== next.onTemplateFieldsCommit) return false
+  if (prev.onDeactivateTemplate !== next.onDeactivateTemplate) return false
+  return true
+}
+
+function SortableTaskRowInner({
   log,
-  children,
-}: {
-  log: LogWithTemplate
-  children: (dragHandleProps: HTMLAttributes<HTMLButtonElement>) => ReactNode
-}) {
+  onToggle,
+  onNoteChange,
+  onTemplateFieldsCommit,
+  onDeactivateTemplate,
+}: SortableTaskRowProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
     useSortable({ id: log.id })
   const style = {
@@ -110,13 +148,25 @@ function SortableTaskRow({
     transition,
     opacity: isDragging ? 0.88 : 1,
   }
-  const dragHandleProps = { ...attributes, ...listeners }
+  const dragHandleProps = useMemo(
+    () => ({ ...attributes, ...listeners }) as HTMLAttributes<HTMLButtonElement>,
+    [attributes, listeners],
+  )
   return (
     <li ref={setNodeRef} style={style} className="list-none">
-      {children(dragHandleProps)}
+      <TaskItem
+        log={log}
+        onToggle={onToggle}
+        onNoteChange={onNoteChange}
+        dragHandleProps={dragHandleProps}
+        onTemplateFieldsCommit={onTemplateFieldsCommit}
+        onDeactivateTemplate={onDeactivateTemplate}
+      />
     </li>
   )
 }
+
+const SortableTaskRow = memo(SortableTaskRowInner, sortableRowPropsEqual)
 
 export function GroupedDayChecklist({
   initialLogs,
@@ -139,6 +189,9 @@ export function GroupedDayChecklist({
       ),
   )
 
+  const logsRef = useRef(logs)
+  logsRef.current = logs
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 8 },
@@ -148,43 +201,48 @@ export function GroupedDayChecklist({
     }),
   )
 
-  const handleToggle = (logId: string, currentStatus: TaskStatus) => {
-    const next: TaskStatus =
-      currentStatus === 'completed' ? 'pending' : 'completed'
+  const handleToggle = useCallback(
+    (logId: string, currentStatus: TaskStatus) => {
+      const next: TaskStatus =
+        currentStatus === 'completed' ? 'pending' : 'completed'
 
-    // Sync optimistic update so checkbox matches wellness UX (paint first, then persist).
-    applyOptimistic({ id: logId, status: next })
-    void (async () => {
-      try {
-        if (localFirst) {
-          await updateLogStatusLocal(logId, next)
-        } else {
-          await updateLogStatus(logId, next)
+      applyOptimistic({ id: logId, status: next })
+      void (async () => {
+        try {
+          if (localFirst) {
+            await updateLogStatusLocal(logId, next)
+          } else {
+            await updateLogStatus(logId, next)
+          }
+        } catch {
+          applyOptimistic({ id: logId, status: currentStatus })
         }
-      } catch {
-        applyOptimistic({ id: logId, status: currentStatus })
-      }
-    })()
-  }
+      })()
+    },
+    [applyOptimistic, localFirst],
+  )
 
-  const handleNoteChange = (logId: string, note: string) => {
-    const previousNote =
-      logs.find((l) => l.id === logId)?.note ?? ''
-    applyOptimistic({ id: logId, note })
-    void (async () => {
-      try {
-        if (localFirst) {
-          await updateLogNoteLocal(logId, note)
-        } else {
-          await updateLogNote(logId, note)
+  const handleNoteChange = useCallback(
+    (logId: string, note: string) => {
+      const previousNote =
+        logsRef.current.find((l) => l.id === logId)?.note ?? ''
+      applyOptimistic({ id: logId, note })
+      void (async () => {
+        try {
+          if (localFirst) {
+            await updateLogNoteLocal(logId, note)
+          } else {
+            await updateLogNote(logId, note)
+          }
+        } catch {
+          applyOptimistic({ id: logId, note: previousNote })
         }
-      } catch {
-        applyOptimistic({ id: logId, note: previousNote })
-      }
-    })()
-  }
+      })()
+    },
+    [applyOptimistic, localFirst],
+  )
 
-  const handleDeactivateTemplate = (templateId: string) => {
+  const handleDeactivateTemplate = useCallback((templateId: string) => {
     void (async () => {
       try {
         await deactivateTaskTemplate(templateId)
@@ -196,52 +254,59 @@ export function GroupedDayChecklist({
         window.setTimeout(() => setTemplateFeedback('idle'), 5000)
       }
     })()
-  }
+  }, [router])
 
-  const handleTemplateFieldsCommit = async (
-    templateId: string,
-    fields: { title: string; description: string | null },
-  ) => {
-    await updateTaskTemplateFields(templateId, {
-      title: fields.title,
-      description: fields.description,
-    })
-    router.refresh()
-  }
+  const handleTemplateFieldsCommit = useCallback(
+    async (
+      templateId: string,
+      fields: { title: string; description: string | null },
+    ) => {
+      await updateTaskTemplateFields(templateId, {
+        title: fields.title,
+        description: fields.description,
+      })
+      router.refresh()
+    },
+    [router],
+  )
 
-  const handleDragEnd = (e: DragEndEvent) => {
-    if (!localFirst) return
-    const { active, over } = e
-    if (!over || active.id === over.id) return
-    const activeLog = logs.find((l) => l.id === active.id)
-    const overLog = logs.find((l) => l.id === over.id)
-    if (!activeLog || !overLog) return
-    const keyA = sectionKey(activeLog)
-    const keyB = sectionKey(overLog)
-    if (keyA !== keyB) return
-    const sectionLogs = getSectionLogs(logs, keyA)
-    const oldIndex = sectionLogs.findIndex((l) => l.id === active.id)
-    const newIndex = sectionLogs.findIndex((l) => l.id === over.id)
-    if (oldIndex < 0 || newIndex < 0) return
-    const moved = arrayMove(sectionLogs, oldIndex, newIndex)
-    const newSectionTemplateIds = moved.map((l) => l.task_template_id)
-    const globalTemplateIds = logs.map((l) => l.task_template_id)
-    const sectionTemplateIds = sectionLogs.map((l) => l.task_template_id)
-    const merged = mergeSectionOrder(
-      globalTemplateIds,
-      sectionTemplateIds,
-      newSectionTemplateIds,
-    )
-    startTransition(async () => {
-      try {
-        await reorderTaskTemplates(merged)
-        router.refresh()
-      } catch {
-        setTemplateFeedback('err')
-        window.setTimeout(() => setTemplateFeedback('idle'), 5000)
-      }
-    })
-  }
+  const handleDragEnd = useCallback(
+    (e: DragEndEvent) => {
+      if (!localFirst) return
+      const list = logsRef.current
+      const { active, over } = e
+      if (!over || active.id === over.id) return
+      const activeLog = list.find((l) => l.id === active.id)
+      const overLog = list.find((l) => l.id === over.id)
+      if (!activeLog || !overLog) return
+      const keyA = sectionKey(activeLog)
+      const keyB = sectionKey(overLog)
+      if (keyA !== keyB) return
+      const sectionLogs = getSectionLogs(list, keyA)
+      const oldIndex = sectionLogs.findIndex((l) => l.id === active.id)
+      const newIndex = sectionLogs.findIndex((l) => l.id === over.id)
+      if (oldIndex < 0 || newIndex < 0) return
+      const moved = arrayMove(sectionLogs, oldIndex, newIndex)
+      const newSectionTemplateIds = moved.map((l) => l.task_template_id)
+      const globalTemplateIds = list.map((l) => l.task_template_id)
+      const sectionTemplateIds = sectionLogs.map((l) => l.task_template_id)
+      const merged = mergeSectionOrder(
+        globalTemplateIds,
+        sectionTemplateIds,
+        newSectionTemplateIds,
+      )
+      startTransition(async () => {
+        try {
+          await reorderTaskTemplates(merged)
+          router.refresh()
+        } catch {
+          setTemplateFeedback('err')
+          window.setTimeout(() => setTemplateFeedback('idle'), 5000)
+        }
+      })
+    },
+    [localFirst, router, startTransition],
+  )
 
   const reminders = logs.filter((l) => l.task_templates?.category === 'reminder')
   const mainByCat = MAIN_TASK_CATEGORY_ORDER.map((key) => ({
@@ -309,18 +374,14 @@ export function GroupedDayChecklist({
                 strategy={verticalListSortingStrategy}
               >
                 {reminders.map((log) => (
-                  <SortableTaskRow key={log.id} log={log}>
-                    {(dragHandleProps) => (
-                      <TaskItem
-                        log={log}
-                        onToggle={handleToggle}
-                        onNoteChange={handleNoteChange}
-                        dragHandleProps={dragHandleProps}
-                        onTemplateFieldsCommit={handleTemplateFieldsCommit}
-                        onDeactivateTemplate={handleDeactivateTemplate}
-                      />
-                    )}
-                  </SortableTaskRow>
+                  <SortableTaskRow
+                    key={log.id}
+                    log={log}
+                    onToggle={handleToggle}
+                    onNoteChange={handleNoteChange}
+                    onTemplateFieldsCommit={handleTemplateFieldsCommit}
+                    onDeactivateTemplate={handleDeactivateTemplate}
+                  />
                 ))}
               </SortableContext>
             ) : (
@@ -350,18 +411,14 @@ export function GroupedDayChecklist({
                 strategy={verticalListSortingStrategy}
               >
                 {items.map((log) => (
-                  <SortableTaskRow key={log.id} log={log}>
-                    {(dragHandleProps) => (
-                      <TaskItem
-                        log={log}
-                        onToggle={handleToggle}
-                        onNoteChange={handleNoteChange}
-                        dragHandleProps={dragHandleProps}
-                        onTemplateFieldsCommit={handleTemplateFieldsCommit}
-                        onDeactivateTemplate={handleDeactivateTemplate}
-                      />
-                    )}
-                  </SortableTaskRow>
+                  <SortableTaskRow
+                    key={log.id}
+                    log={log}
+                    onToggle={handleToggle}
+                    onNoteChange={handleNoteChange}
+                    onTemplateFieldsCommit={handleTemplateFieldsCommit}
+                    onDeactivateTemplate={handleDeactivateTemplate}
+                  />
                 ))}
               </SortableContext>
             ) : (
@@ -391,18 +448,14 @@ export function GroupedDayChecklist({
                 strategy={verticalListSortingStrategy}
               >
                 {others.map((log) => (
-                  <SortableTaskRow key={log.id} log={log}>
-                    {(dragHandleProps) => (
-                      <TaskItem
-                        log={log}
-                        onToggle={handleToggle}
-                        onNoteChange={handleNoteChange}
-                        dragHandleProps={dragHandleProps}
-                        onTemplateFieldsCommit={handleTemplateFieldsCommit}
-                        onDeactivateTemplate={handleDeactivateTemplate}
-                      />
-                    )}
-                  </SortableTaskRow>
+                  <SortableTaskRow
+                    key={log.id}
+                    log={log}
+                    onToggle={handleToggle}
+                    onNoteChange={handleNoteChange}
+                    onTemplateFieldsCommit={handleTemplateFieldsCommit}
+                    onDeactivateTemplate={handleDeactivateTemplate}
+                  />
                 ))}
               </SortableContext>
             ) : (

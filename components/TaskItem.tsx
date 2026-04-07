@@ -1,6 +1,12 @@
 'use client'
 
-import { useEffect, useState, type HTMLAttributes, type ReactNode } from 'react'
+import {
+  useEffect,
+  useState,
+  memo,
+  type HTMLAttributes,
+  type ReactNode,
+} from 'react'
 import { NotebookPen, ChevronUp, GripVertical } from 'lucide-react'
 import { AppIcon } from '@/components/AppIcon'
 import { Button } from '@/components/ui/button'
@@ -14,7 +20,7 @@ import { useLongPress } from '@/lib/hooks/use-long-press'
 import { labelForCategory, styleForCategory } from '@/lib/task-categories'
 import type { LogWithTemplate, TaskStatus } from '@/types/database'
 
-interface TaskItemProps {
+export interface TaskItemProps {
   log: LogWithTemplate
   onToggle: (logId: string, currentStatus: TaskStatus) => void
   onNoteChange: (logId: string, note: string) => void
@@ -29,7 +35,29 @@ interface TaskItemProps {
   onDeactivateTemplate?: (templateId: string) => void
 }
 
-export function TaskItem({
+function logVisualEqual(a: LogWithTemplate, b: LogWithTemplate): boolean {
+  if (a === b) return true
+  if (a.id !== b.id || a.status !== b.status || a.note !== b.note) return false
+  const at = a.task_templates
+  const bt = b.task_templates
+  if (at?.id !== bt?.id) return false
+  if (at?.title !== bt?.title) return false
+  if (at?.description !== bt?.description) return false
+  if (at?.category !== bt?.category) return false
+  return true
+}
+
+function taskItemPropsEqual(prev: TaskItemProps, next: TaskItemProps): boolean {
+  if (!logVisualEqual(prev.log, next.log)) return false
+  if (prev.onToggle !== next.onToggle) return false
+  if (prev.onNoteChange !== next.onNoteChange) return false
+  if (prev.onTemplateFieldsCommit !== next.onTemplateFieldsCommit) return false
+  if (prev.onDeactivateTemplate !== next.onDeactivateTemplate) return false
+  if (prev.dragHandleProps !== next.dragHandleProps) return false
+  return true
+}
+
+function TaskItemInner({
   log,
   onToggle,
   onNoteChange,
@@ -45,11 +73,19 @@ export function TaskItem({
   const [descValue, setDescValue] = useState(log.task_templates?.description ?? '')
   const [showDelete, setShowDelete] = useState(false)
   const [fieldsBusy, setFieldsBusy] = useState(false)
+  /** Instant checkbox / row styling; synced from log.status when parent updates. */
+  const [localCompleted, setLocalCompleted] = useState(
+    () => log.status === 'completed',
+  )
 
   const template = log.task_templates
-  const isCompleted = log.status === 'completed'
+  const isCompleted = localCompleted
 
   const catStyle = styleForCategory(template?.category ?? '')
+
+  useEffect(() => {
+    setLocalCompleted(log.status === 'completed')
+  }, [log.status])
 
   useEffect(() => {
     setTitleValue(template?.title ?? '')
@@ -134,6 +170,12 @@ export function TaskItem({
     }
   }
 
+  const handleCheckboxChange = () => {
+    const nextVisual = !localCompleted
+    setLocalCompleted(nextVisual)
+    onToggle(log.id, log.status)
+  }
+
   return (
     <Card
       data-task-row={log.id}
@@ -156,8 +198,8 @@ export function TaskItem({
           ) : null}
 
           <Checkbox
-            checked={isCompleted}
-            onCheckedChange={() => onToggle(log.id, log.status)}
+            checked={localCompleted}
+            onCheckedChange={handleCheckboxChange}
             className="mt-0.5 shrink-0"
             aria-label={`Mark "${template?.title}" as ${isCompleted ? 'incomplete' : 'complete'}`}
           />
@@ -311,3 +353,5 @@ export function TaskItem({
     </Card>
   )
 }
+
+export const TaskItem = memo(TaskItemInner, taskItemPropsEqual)

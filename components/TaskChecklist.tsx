@@ -1,6 +1,6 @@
 'use client'
 
-import { useOptimistic } from 'react'
+import { useCallback, useOptimistic, useRef } from 'react'
 import Link from 'next/link'
 import { ClipboardList, Plus } from 'lucide-react'
 import { AppIcon } from '@/components/AppIcon'
@@ -27,33 +27,43 @@ export function TaskChecklist({ initialLogs }: TaskChecklistProps) {
       ),
   )
 
+  const logsRef = useRef(logs)
+  logsRef.current = logs
+
   const completed = logs.filter((l) => l.status === 'completed').length
 
-  const handleToggle = (logId: string, currentStatus: TaskStatus) => {
-    const next: TaskStatus =
-      currentStatus === 'completed' ? 'pending' : 'completed'
+  const handleToggle = useCallback(
+    (logId: string, currentStatus: TaskStatus) => {
+      const next: TaskStatus =
+        currentStatus === 'completed' ? 'pending' : 'completed'
 
-    applyOptimistic({ id: logId, status: next })
-    void (async () => {
-      try {
-        await updateLogStatus(logId, next)
-      } catch {
-        applyOptimistic({ id: logId, status: currentStatus })
-      }
-    })()
-  }
+      applyOptimistic({ id: logId, status: next })
+      void (async () => {
+        try {
+          await updateLogStatus(logId, next)
+        } catch {
+          applyOptimistic({ id: logId, status: currentStatus })
+        }
+      })()
+    },
+    [applyOptimistic],
+  )
 
-  const handleNoteChange = (logId: string, note: string) => {
-    const previousNote = logs.find((l) => l.id === logId)?.note ?? ''
-    applyOptimistic({ id: logId, note })
-    void (async () => {
-      try {
-        await updateLogNote(logId, note)
-      } catch {
-        applyOptimistic({ id: logId, note: previousNote })
-      }
-    })()
-  }
+  const handleNoteChange = useCallback(
+    (logId: string, note: string) => {
+      const previousNote =
+        logsRef.current.find((l) => l.id === logId)?.note ?? ''
+      applyOptimistic({ id: logId, note })
+      void (async () => {
+        try {
+          await updateLogNote(logId, note)
+        } catch {
+          applyOptimistic({ id: logId, note: previousNote })
+        }
+      })()
+    },
+    [applyOptimistic],
+  )
 
   if (logs.length === 0) {
     return (
