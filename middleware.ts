@@ -1,46 +1,58 @@
 import { createServerClient } from '@supabase/ssr'
+import type { User } from '@supabase/supabase-js'
+import { getSupabaseAnonKey, getSupabaseUrl } from '@/lib/supabase/env'
 import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
+  const supabaseUrl = getSupabaseUrl()
+  const supabaseAnonKey = getSupabaseAnonKey()
+
   let supabaseResponse = NextResponse.next({ request })
+  let user: User | null = null
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
+  if (supabaseUrl && supabaseAnonKey) {
+    try {
+      const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+        cookies: {
+          getAll() {
+            return request.cookies.getAll()
+          },
+          setAll(
+            cookiesToSet: {
+              name: string
+              value: string
+              options?: Parameters<typeof supabaseResponse.cookies.set>[2]
+            }[],
+          ) {
+            cookiesToSet.forEach(({ name, value }) =>
+              request.cookies.set(name, value),
+            )
+            supabaseResponse = NextResponse.next({ request })
+            cookiesToSet.forEach(({ name, value, options }) =>
+              supabaseResponse.cookies.set(name, value, options),
+            )
+          },
         },
-        setAll(
-          cookiesToSet: {
-            name: string
-            value: string
-            options?: Parameters<typeof supabaseResponse.cookies.set>[2]
-          }[],
-        ) {
-          // Write updated cookies to both the request and the response
-          cookiesToSet.forEach(({ name, value }) =>
-            request.cookies.set(name, value),
-          )
-          supabaseResponse = NextResponse.next({ request })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options),
-          )
-        },
-      },
-    },
-  )
+      })
 
-  // Refresh session — must NOT be removed, keeps JWT fresh
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+      // Refresh session — must NOT be removed, keeps JWT fresh
+      const {
+        data: { user: u },
+      } = await supabase.auth.getUser()
+      user = u
+    } catch (err) {
+      console.error('[middleware] Supabase error:', err)
+      supabaseResponse = NextResponse.next({ request })
+      user = null
+    }
+  } else {
+    console.error(
+      '[middleware] Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    )
+  }
 
   const { pathname } = request.nextUrl
 
-  // Unauthenticated users can only access /login and /auth/*.
-  // All other routes (e.g. /, /templates) require a session.
   const isPublicPath =
     pathname.startsWith('/login') ||
     pathname.startsWith('/register') ||
@@ -57,7 +69,6 @@ export async function middleware(request: NextRequest) {
     return res
   }
 
-  // Authenticated users visiting /login or /register → redirect to home
   if (user && (pathname === '/login' || pathname === '/register')) {
     const homeUrl = request.nextUrl.clone()
     homeUrl.pathname = '/today'
@@ -78,7 +89,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Run on all paths except static files, images, and icons
     '/((?!_next/static|_next/image|favicon.ico|icons|manifest).*)',
   ],
 }

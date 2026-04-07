@@ -9,6 +9,7 @@
 // Authentication: Bearer token matching the CRON_SECRET env var.
 // =============================================================================
 
+import { getSupabaseServiceRoleKey, getSupabaseUrl } from '@/lib/supabase/env'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { sendPushNotification } from '@/lib/web-push'
@@ -76,8 +77,8 @@ export async function POST(req: NextRequest) {
   // 2. Use a service-role client so we can read all users' settings
   //    (bypasses RLS — only safe on the server with a protected route)
   const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    getSupabaseUrl(),
+    getSupabaseServiceRoleKey(),
   )
 
   const now = new Date()

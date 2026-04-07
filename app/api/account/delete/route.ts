@@ -1,12 +1,13 @@
 import { createClient as createAdminClient } from '@supabase/supabase-js'
+import { getSupabaseServiceRoleKey, getSupabaseUrl } from '@/lib/supabase/env'
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 export const runtime = 'nodejs'
 
 export async function POST() {
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const serviceKey = getSupabaseServiceRoleKey()
+  const url = getSupabaseUrl()
   if (!serviceKey || !url) {
     return NextResponse.json({ error: '伺服器未設定 SUPABASE_SERVICE_ROLE_KEY' }, { status: 503 })
   }
