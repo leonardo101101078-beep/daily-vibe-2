@@ -20,6 +20,7 @@ export async function getLogsWithTemplatesForDate(
   for (const l of logs) {
     const tpl = tplMap.get(l.task_template_id)
     if (!tpl) continue
+    if (tpl.is_active === false) continue
     const logRow = toPlainRow(l)
     const tplRow = toPlainRow(tpl) as TaskTemplate
     merged.push({

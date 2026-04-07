@@ -51,11 +51,11 @@ export const CUSTOM_CATEGORY_STYLE = {
 } as const
 
 export const CATEGORY_STYLES: Record<string, { bg: string; text: string }> = {
-  work: { bg: 'bg-blue-100', text: 'text-blue-700' },
-  learning: { bg: 'bg-purple-100', text: 'text-purple-700' },
-  social: { bg: 'bg-cyan-100', text: 'text-cyan-800' },
-  creative: { bg: 'bg-fuchsia-100', text: 'text-fuchsia-800' },
-  other: { bg: 'bg-slate-200', text: 'text-slate-700' },
+  work: { bg: 'bg-red-100', text: 'text-red-800' },
+  learning: { bg: 'bg-yellow-100', text: 'text-yellow-900' },
+  social: { bg: 'bg-orange-100', text: 'text-orange-800' },
+  creative: { bg: 'bg-blue-100', text: 'text-blue-800' },
+  other: { bg: 'bg-green-100', text: 'text-green-800' },
   reminder: { bg: 'bg-rose-100', text: 'text-rose-800' },
   chores: { bg: 'bg-slate-200', text: 'text-slate-700' },
   health: { bg: 'bg-green-100', text: 'text-green-700' },

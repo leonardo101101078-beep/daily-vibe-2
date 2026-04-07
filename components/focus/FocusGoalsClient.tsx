@@ -206,72 +206,78 @@ export function FocusGoalsClient({
   const prev = shiftMonth(year, month, -1)
   const next = shiftMonth(year, month, 1)
 
+  const goalHeaderStrip = 'border-b border-rose-100 bg-rose-50 px-6 py-4 sm:px-6'
+
   return (
     <div className="space-y-8">
       <section className="space-y-4">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           目前目標
         </h2>
-        <div className="rounded-2xl border border-primary/25 bg-primary/5 p-5 shadow-sm">
-          <div className="space-y-4">
-            <div>
-              <h3 className="font-display text-lg font-bold">年度目標</h3>
-              {annualItems.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">尚無年度目標</p>
-              ) : (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragEnd={onAnnualDragEnd}
+        <div className="overflow-hidden rounded-2xl border border-border/60 bg-card shadow-sm">
+          <div className={goalHeaderStrip}>
+            <h3 className="font-display text-lg font-bold">年度目標</h3>
+          </div>
+          <div className="p-5">
+            {annualItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">尚無年度目標</p>
+            ) : (
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={onAnnualDragEnd}
+              >
+                <SortableContext
+                  items={annualItems.map((g) => g.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  <SortableContext
-                    items={annualItems.map((g) => g.id)}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <ul className="mt-3 space-y-2" role="list">
-                      {annualItems.map((g) => (
-                        <SortableGoalRow
-                          key={g.id}
-                          id={g.id}
-                          title={g.title}
-                          showDelete={deleteRevealId === g.id}
-                          onRevealDelete={() => setDeleteRevealId(g.id)}
-                          disabled={pending}
-                          onDelete={() => {
-                            startTransition(async () => {
-                              await deleteAnnualGoal(g.id)
-                              setDeleteRevealId(null)
-                              refresh()
-                            })
-                          }}
-                        />
-                      ))}
-                    </ul>
-                  </SortableContext>
-                </DndContext>
-              )}
-            </div>
-            <div className="border-t border-border/40 pt-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <h3 className="font-display text-lg font-bold">月度重點</h3>
-                <div className="flex items-center gap-2 text-sm">
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/focus?year=${prev.year}&month=${prev.month}`}>
-                      上月
-                    </Link>
-                  </Button>
-                  <span className="tabular-nums text-muted-foreground">
-                    {year} 年 {month} 月
-                  </span>
-                  <Button variant="outline" size="sm" asChild>
-                    <Link href={`/focus?year=${next.year}&month=${next.month}`}>
-                      下月
-                    </Link>
-                  </Button>
-                </div>
+                  <ul className="space-y-2" role="list">
+                    {annualItems.map((g) => (
+                      <SortableGoalRow
+                        key={g.id}
+                        id={g.id}
+                        title={g.title}
+                        showDelete={deleteRevealId === g.id}
+                        onRevealDelete={() => setDeleteRevealId(g.id)}
+                        disabled={pending}
+                        onDelete={() => {
+                          startTransition(async () => {
+                            await deleteAnnualGoal(g.id)
+                            setDeleteRevealId(null)
+                            refresh()
+                          })
+                        }}
+                      />
+                    ))}
+                  </ul>
+                </SortableContext>
+              </DndContext>
+            )}
+          </div>
+          <div className="border-t border-border/40">
+            <div
+              className={`flex flex-wrap items-center justify-between gap-2 ${goalHeaderStrip}`}
+            >
+              <h3 className="font-display text-lg font-bold">月度重點</h3>
+              <div className="flex items-center gap-2 text-sm">
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/focus?year=${prev.year}&month=${prev.month}`}>
+                    上月
+                  </Link>
+                </Button>
+                <span className="tabular-nums text-muted-foreground">
+                  {year} 年 {month} 月
+                </span>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/focus?year=${next.year}&month=${next.month}`}>
+                    下月
+                  </Link>
+                </Button>
               </div>
+            </div>
+            <div className="p-5">
               {monthlyItems.length === 0 ? (
-                <p className="mt-2 text-sm text-muted-foreground">本月尚無重點</p>
+                <p className="text-sm text-muted-foreground">本月尚無重點</p>
               ) : (
                 <DndContext
                   sensors={sensors}
@@ -282,7 +288,7 @@ export function FocusGoalsClient({
                     items={monthlyItems.map((g) => g.id)}
                     strategy={verticalListSortingStrategy}
                   >
-                    <ul className="mt-3 space-y-2" role="list">
+                    <ul className="space-y-2" role="list">
                       {monthlyItems.map((g) => (
                         <SortableGoalRow
                           key={g.id}
@@ -313,8 +319,8 @@ export function FocusGoalsClient({
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           新增目標
         </h2>
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-rose-100 bg-rose-50 pb-4 pt-6">
             <CardTitle className="text-lg">年度目標</CardTitle>
           </CardHeader>
           <CardContent>
@@ -344,8 +350,8 @@ export function FocusGoalsClient({
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-2">
+        <Card className="overflow-hidden">
+          <CardHeader className="border-b border-rose-100 bg-rose-50 pb-4 pt-6">
             <CardTitle className="text-lg">月度重點</CardTitle>
           </CardHeader>
           <CardContent>

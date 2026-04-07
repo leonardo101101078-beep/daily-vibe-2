@@ -222,23 +222,69 @@ export async function addWeeklyGoal(weekStart: string, title: string): Promise<v
   const t = title.trim()
   if (!t) throw new Error('請輸入目標')
 
-  const { data: last } = await supabase
+  const { data: existing, error: listErr } = await supabase
     .from('weekly_goals')
-    .select('sort_order')
+    .select('id, sort_order')
     .eq('user_id', user.id)
     .eq('week_start', weekStart)
     .order('sort_order', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+
+  if (listErr) throw new Error(listErr.message)
+
+  for (const row of existing ?? []) {
+    const { error: bumpErr } = await supabase
+      .from('weekly_goals')
+      .update({ sort_order: row.sort_order + 1 })
+      .eq('id', row.id)
+      .eq('user_id', user.id)
+    if (bumpErr) throw new Error(bumpErr.message)
+  }
 
   const { error } = await supabase.from('weekly_goals').insert({
     user_id: user.id,
     week_start: weekStart,
     title: t,
-    sort_order: (last?.sort_order ?? -1) + 1,
+    sort_order: 0,
   })
 
   if (error) throw new Error(error.message)
+  for (const p of PATHS) revalidatePath(p)
+}
+
+export async function reorderWeeklyGoals(
+  weekStart: string,
+  orderedIds: string[],
+): Promise<void> {
+  const supabase = createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) throw new Error('Not authenticated')
+
+  const { data: rows, error: fetchErr } = await supabase
+    .from('weekly_goals')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('week_start', weekStart)
+    .order('sort_order', { ascending: true })
+
+  if (fetchErr) throw new Error(fetchErr.message)
+
+  const expected = new Set((rows ?? []).map((r) => r.id as string))
+  if (orderedIds.length !== expected.size) throw new Error('排序內容無效')
+  for (const id of orderedIds) {
+    if (!expected.has(id)) throw new Error('排序內容無效')
+  }
+
+  for (let i = 0; i < orderedIds.length; i++) {
+    const { error } = await supabase
+      .from('weekly_goals')
+      .update({ sort_order: i })
+      .eq('id', orderedIds[i])
+      .eq('user_id', user.id)
+
+    if (error) throw new Error(error.message)
+  }
   for (const p of PATHS) revalidatePath(p)
 }
 

@@ -26,7 +26,7 @@ interface TaskItemProps {
     fields: { title: string; description: string | null },
   ) => void | Promise<void>
   /** Long-press to reveal delete; same semantics as previous「停用」. */
-  onDeactivateTemplate?: (templateId: string, templateTitle: string) => void
+  onDeactivateTemplate?: (templateId: string) => void
 }
 
 export function TaskItem({
@@ -255,11 +255,11 @@ export function TaskItem({
                   size="sm"
                   className="h-8 text-xs"
                   onClick={() => {
-                    onDeactivateTemplate(template.id, template.title ?? '')
+                    onDeactivateTemplate(template.id)
                     setShowDelete(false)
                   }}
                 >
-                  停用任務模板
+                  刪除
                 </Button>
                 <Button
                   type="button"

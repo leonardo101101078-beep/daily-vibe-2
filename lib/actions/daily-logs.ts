@@ -125,7 +125,10 @@ export async function fetchTodayLogs(
     .order('task_templates(sort_order)', { ascending: true })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as LogWithTemplate[]
+  const rows = (data ?? []) as LogWithTemplate[]
+  return rows.filter(
+    (l) => (l.task_templates as { is_active?: boolean } | null)?.is_active !== false,
+  )
 }
 
 /** Completion counts for a single day (for 紀錄 / weekly). */
@@ -227,5 +230,8 @@ export async function fetchLogsBetweenDates(
     .order('date', { ascending: false })
 
   if (error) throw new Error(error.message)
-  return (data ?? []) as LogWithTemplate[]
+  const rows = (data ?? []) as LogWithTemplate[]
+  return rows.filter(
+    (l) => (l.task_templates as { is_active?: boolean } | null)?.is_active !== false,
+  )
 }

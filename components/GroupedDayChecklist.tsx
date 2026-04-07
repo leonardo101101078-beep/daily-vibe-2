@@ -191,14 +191,7 @@ export function GroupedDayChecklist({
     })()
   }
 
-  const handleDeactivateTemplate = (templateId: string, templateTitle: string) => {
-    if (
-      !confirm(
-        `確定停用「${templateTitle}」？停用後不會再出現在未來日期；今日紀錄仍保留。`,
-      )
-    ) {
-      return
-    }
+  const handleDeactivateTemplate = (templateId: string) => {
     void (async () => {
       try {
         await deactivateTaskTemplate(templateId)
@@ -301,7 +294,7 @@ export function GroupedDayChecklist({
     <>
       <div className="px-4 pt-2">
         {templateFeedback === 'ok' ? (
-          <p className="mb-2 text-xs font-medium text-primary">已停用任務模板</p>
+          <p className="mb-2 text-xs font-medium text-primary">已刪除</p>
         ) : null}
         {templateFeedback === 'err' ? (
           <p className="mb-2 text-xs font-medium text-destructive">
