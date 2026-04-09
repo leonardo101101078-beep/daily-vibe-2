@@ -305,6 +305,7 @@ export function TodayExperience({
               key={viewDate}
               initialLogs={logs}
               localFirst
+              onLocalLogPersist={refreshFromDexie}
             />
           </div>
         </div>

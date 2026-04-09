@@ -13,9 +13,18 @@ const withPWA = require('@ducanh2912/next-pwa').default({
   dynamicStartUrl: false,
   runtimeCaching: [
     {
-      // HTML navigations: always network (no stale shell after refresh / new deploy).
+      // HTML navigations: prefer network; slow/offline fall back to cached shell (data from IndexedDB).
+      // Deploy may briefly serve an older shell — see cache expiration below.
       urlPattern: ({ request }) => request.mode === 'navigate',
-      handler: 'NetworkOnly',
+      handler: 'NetworkFirst',
+      options: {
+        cacheName: 'html-cache',
+        networkTimeoutSeconds: 3,
+        expiration: {
+          maxEntries: 5,
+          maxAgeSeconds: 86400,
+        },
+      },
     },
     {
       // 即時資料為主：避免快取舊 REST 回應；本機資料以 IndexedDB 為準（見 lib/local、lib/sync）。

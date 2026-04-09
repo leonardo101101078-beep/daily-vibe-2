@@ -52,6 +52,8 @@ interface GroupedDayChecklistProps {
   initialLogs: LogWithTemplate[]
   /** When set, writes go to IndexedDB first (Daily-Vibe 2.0 local-first). */
   localFirst?: boolean
+  /** After IndexedDB write succeeds (local-first only); e.g. refresh parent completion stats. */
+  onLocalLogPersist?: () => void | Promise<void>
 }
 
 function isMainPreset(cat: string): cat is PresetCategoryKey {
@@ -171,6 +173,7 @@ const SortableTaskRow = memo(SortableTaskRowInner, sortableRowPropsEqual)
 export function GroupedDayChecklist({
   initialLogs,
   localFirst = false,
+  onLocalLogPersist,
 }: GroupedDayChecklistProps) {
   const router = useRouter()
   const [, startTransition] = useTransition()
@@ -206,40 +209,50 @@ export function GroupedDayChecklist({
       const next: TaskStatus =
         currentStatus === 'completed' ? 'pending' : 'completed'
 
-      applyOptimistic({ id: logId, status: next })
+      startTransition(() => {
+        applyOptimistic({ id: logId, status: next })
+      })
       void (async () => {
         try {
           if (localFirst) {
             await updateLogStatusLocal(logId, next)
+            await onLocalLogPersist?.()
           } else {
             await updateLogStatus(logId, next)
           }
         } catch {
-          applyOptimistic({ id: logId, status: currentStatus })
+          startTransition(() => {
+            applyOptimistic({ id: logId, status: currentStatus })
+          })
         }
       })()
     },
-    [applyOptimistic, localFirst],
+    [applyOptimistic, localFirst, onLocalLogPersist, startTransition],
   )
 
   const handleNoteChange = useCallback(
     (logId: string, note: string) => {
       const previousNote =
         logsRef.current.find((l) => l.id === logId)?.note ?? ''
-      applyOptimistic({ id: logId, note })
+      startTransition(() => {
+        applyOptimistic({ id: logId, note })
+      })
       void (async () => {
         try {
           if (localFirst) {
             await updateLogNoteLocal(logId, note)
+            await onLocalLogPersist?.()
           } else {
             await updateLogNote(logId, note)
           }
         } catch {
-          applyOptimistic({ id: logId, note: previousNote })
+          startTransition(() => {
+            applyOptimistic({ id: logId, note: previousNote })
+          })
         }
       })()
     },
-    [applyOptimistic, localFirst],
+    [applyOptimistic, localFirst, onLocalLogPersist, startTransition],
   )
 
   const handleDeactivateTemplate = useCallback((templateId: string) => {
